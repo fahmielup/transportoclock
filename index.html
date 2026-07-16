@@ -628,7 +628,6 @@ const firebaseConfig = {
 
 let rtdb = null;
 let useFirebase = false;
-let isSyncing = false;
 
 try {
   if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
@@ -681,12 +680,11 @@ function loadEntries() {
     // Load from Realtime Database with real-time listener
     rtdb.ref(RTDB_PATH).on('value', snapshot => {
       const val = snapshot.val();
-      if (val === null && !isSyncing) {
+      if (val === null) {
         // First time: seed default entries
         entries = [...DEFAULT_ENTRIES];
         seedRTDB();
       } else if (val !== null) {
-        isSyncing = true;
         entries = Object.keys(val).map(key => val[key]);
       }
       upgradeEntries();
@@ -734,21 +732,21 @@ function seedRTDB() {
   rtdb.ref(RTDB_PATH).set(obj);
 }
 
+let syncTimer = null;
+
 function saveEntries() {
   cacheLocal();
-  if (useFirebase && !isSyncing) {
-    syncToRTDB();
+  if (useFirebase) {
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(() => syncToRTDB(), 500);
   }
 }
 
 function syncToRTDB() {
-  isSyncing = true;
   const obj = {};
   entries.forEach(entry => { obj[entry.id] = entry; });
-  rtdb.ref(RTDB_PATH).set(obj).then(() => {
-    isSyncing = false;
-  }).catch(() => {
-    isSyncing = false;
+  rtdb.ref(RTDB_PATH).set(obj).catch(err => {
+    console.warn('RTDB sync failed', err);
   });
 }
 
