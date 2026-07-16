@@ -611,7 +611,34 @@
   </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
+// ===== FIREBASE CONFIG =====
+// Gantikan config ini dengan config Firebase anda dari console.firebase.google.com
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+let db = null;
+let useFirebase = false;
+let isSyncing = false;
+
+try {
+  if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    useFirebase = true;
+  }
+} catch(e) {
+  console.warn('Firebase init failed, using localStorage only', e);
+}
+
 // ===== DATA =====
 let entries = [];
 let editingId = null;
@@ -619,19 +646,76 @@ let currentAlarmEntry = null;
 let alarmAudioCtx = null;
 let alarmInterval = null;
 let triggeredKeys = new Set();
-let selectedDay = new Date().getDay(); // 0=Ahad, 1=Isnin, ..., 6=Sabtu
+let selectedDay = new Date().getDay();
 
 const DAY_NAMES = ['Ahad', 'Isnin', 'Selasa', 'Rabu', 'Khamis', 'Jumaat', 'Sabtu'];
-const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0]; // Isnin first, Ahad last
+const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 
 const STORAGE_KEY = 'shuttle_whiteboard_entries';
+const FIRESTORE_COLLECTION = 'schedule_entries';
+
+const DEFAULT_ENTRIES = [
+  { id: nextId(), days: [1, 3, 5], time: '07:30', name: 'Ahmad bin Ali', location: 'vista' },
+  { id: nextId(), days: [1, 4], time: '08:15', name: 'Siti Nurhaliza', location: 'dangabay' },
+  { id: nextId(), days: [1, 2, 4, 6], time: '09:00', name: 'Tan Wei Ming', location: 'vista' },
+  { id: nextId(), days: [1, 5], time: '12:00', name: 'Noraini binti Yusof', location: 'vista' },
+  { id: nextId(), days: [2, 3, 5], time: '08:00', name: 'Rajesh Kumar', location: 'dangabay' },
+  { id: nextId(), days: [2, 4], time: '10:30', name: 'Lim Chee Keong', location: 'dangabay' },
+  { id: nextId(), days: [2, 6], time: '14:00', name: 'Aisyah binti Rahman', location: 'vista' },
+  { id: nextId(), days: [3, 5], time: '07:45', name: 'David Anak Nyaring', location: 'dangabay' },
+  { id: nextId(), days: [3, 0], time: '11:00', name: 'Chong Kar Wai', location: 'dangabay' },
+  { id: nextId(), days: [3, 4, 6], time: '16:30', name: 'Fatimah binti Ibrahim', location: 'vista' },
+  { id: nextId(), days: [4, 5], time: '13:00', name: 'Siti Nurhaliza', location: 'dangabay' },
+  { id: nextId(), days: [4], time: '17:30', name: 'Ahmad bin Ali', location: 'vista' },
+  { id: nextId(), days: [5], time: '12:30', name: 'Fatimah binti Ibrahim', location: 'vista' },
+  { id: nextId(), days: [5, 0], time: '18:00', name: 'Rajesh Kumar', location: 'dangabay' },
+  { id: nextId(), days: [6, 0], time: '09:00', name: 'Aisyah binti Rahman', location: 'vista' },
+  { id: nextId(), days: [6], time: '11:30', name: 'David Anak Nyaring', location: 'dangabay' },
+  { id: nextId(), days: [0], time: '10:00', name: 'Chong Kar Wai', location: 'dangabay' },
+  { id: nextId(), days: [0], time: '14:30', name: 'Noraini binti Yusof', location: 'vista' },
+];
 
 function loadEntries() {
+  if (useFirebase) {
+    // Load from Firestore with real-time listener
+    db.collection(FIRESTORE_COLLECTION).onSnapshot(snapshot => {
+      if (snapshot.empty && !isSyncing) {
+        // First time: seed default entries to Firestore
+        entries = [...DEFAULT_ENTRIES];
+        seedFirestore();
+      } else {
+        isSyncing = true;
+        entries = [];
+        snapshot.forEach(doc => {
+          entries.push(doc.data());
+        });
+      }
+      upgradeEntries();
+      cacheLocal();
+      renderEntries();
+    }, err => {
+      console.warn('Firestore listen failed, using cache', err);
+      loadLocalCache();
+    });
+  } else {
+    loadLocalCache();
+  }
+}
+
+function loadLocalCache() {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (raw) {
     try { entries = JSON.parse(raw); } catch(e) { entries = []; }
   }
-  // Auto-upgrade old entries: convert day (single) to days (array)
+  upgradeEntries();
+  if (!entries || entries.length === 0) {
+    entries = [...DEFAULT_ENTRIES];
+    cacheLocal();
+  }
+  renderEntries();
+}
+
+function upgradeEntries() {
   const today = new Date().getDay();
   entries.forEach(e => {
     if (e.days === undefined || e.days === null) {
@@ -643,32 +727,41 @@ function loadEntries() {
       delete e.day;
     }
   });
-  if (!entries || entries.length === 0) {
-    entries = [
-      { id: nextId(), days: [1, 3, 5], time: '07:30', name: 'Ahmad bin Ali', location: 'vista' },
-      { id: nextId(), days: [1, 4], time: '08:15', name: 'Siti Nurhaliza', location: 'dangabay' },
-      { id: nextId(), days: [1, 2, 4, 6], time: '09:00', name: 'Tan Wei Ming', location: 'vista' },
-      { id: nextId(), days: [1, 5], time: '12:00', name: 'Noraini binti Yusof', location: 'vista' },
-      { id: nextId(), days: [2, 3, 5], time: '08:00', name: 'Rajesh Kumar', location: 'dangabay' },
-      { id: nextId(), days: [2, 4], time: '10:30', name: 'Lim Chee Keong', location: 'dangabay' },
-      { id: nextId(), days: [2, 6], time: '14:00', name: 'Aisyah binti Rahman', location: 'vista' },
-      { id: nextId(), days: [3, 5], time: '07:45', name: 'David Anak Nyaring', location: 'dangabay' },
-      { id: nextId(), days: [3, 0], time: '11:00', name: 'Chong Kar Wai', location: 'dangabay' },
-      { id: nextId(), days: [3, 4, 6], time: '16:30', name: 'Fatimah binti Ibrahim', location: 'vista' },
-      { id: nextId(), days: [4, 5], time: '13:00', name: 'Siti Nurhaliza', location: 'dangabay' },
-      { id: nextId(), days: [4], time: '17:30', name: 'Ahmad bin Ali', location: 'vista' },
-      { id: nextId(), days: [5], time: '12:30', name: 'Fatimah binti Ibrahim', location: 'vista' },
-      { id: nextId(), days: [5, 0], time: '18:00', name: 'Rajesh Kumar', location: 'dangabay' },
-      { id: nextId(), days: [6, 0], time: '09:00', name: 'Aisyah binti Rahman', location: 'vista' },
-      { id: nextId(), days: [6], time: '11:30', name: 'David Anak Nyaring', location: 'dangabay' },
-      { id: nextId(), days: [0], time: '10:00', name: 'Chong Kar Wai', location: 'dangabay' },
-      { id: nextId(), days: [0], time: '14:30', name: 'Noraini binti Yusof', location: 'vista' },
-    ];
-    saveEntries();
-  }
+}
+
+function seedFirestore() {
+  entries.forEach(entry => {
+    db.collection(FIRESTORE_COLLECTION).doc(entry.id).set(entry);
+  });
 }
 
 function saveEntries() {
+  cacheLocal();
+  if (useFirebase && !isSyncing) {
+    syncToFirestore();
+  }
+}
+
+function syncToFirestore() {
+  isSyncing = true;
+  // Simple sync: clear and re-write all entries
+  db.collection(FIRESTORE_COLLECTION).get().then(snapshot => {
+    const batch = db.batch();
+    snapshot.forEach(doc => batch.delete(doc.ref));
+    entries.forEach(entry => {
+      batch.set(db.collection(FIRESTORE_COLLECTION).doc(entry.id), entry);
+    });
+    batch.commit().then(() => {
+      isSyncing = false;
+    }).catch(() => {
+      isSyncing = false;
+    });
+  }).catch(() => {
+    isSyncing = false;
+  });
+}
+
+function cacheLocal() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
 }
 
@@ -1014,8 +1107,8 @@ function init() {
   loadEntries();
   buildClockFace();
   buildDaySelector();
-  renderEntries();
   updateClock();
+  // renderEntries is called by loadEntries callback
 
   setInterval(updateClock, 50);
   setInterval(checkAlarms, 1000);
