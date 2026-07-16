@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Papan Putih Shuttle - Vista Tiara & Dangabay</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a1a2e;
+    color: #fff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* ===== HEADER ===== */
+  #header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 60px;
+    background: linear-gradient(135deg, #0f0f23, #16213e);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 30px;
+    z-index: 100;
+    border-bottom: 2px solid #0d7377;
+  }
+  #header h1 {
+    font-size: 1.5rem;
+    letter-spacing: 3px;
+    color: #0d7377;
+    text-transform: uppercase;
+  }
+  #header .header-right {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  #header .current-time {
+    font-size: 1.2rem;
+    color: #14ffec;
+    font-weight: bold;
+    font-variant-numeric: tabular-nums;
+  }
+  .btn {
+    padding: 8px 18px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .btn-add {
+    background: #0d7377;
+    color: #fff;
+  }
+  .btn-add:hover { background: #14ffec; color: #1a1a2e; }
+  .btn-danger { background: #e94560; color: #fff; }
+  .btn-danger:hover { background: #ff6b81; }
+  .btn-save { background: #0d7377; color: #fff; }
+  .btn-save:hover { background: #14ffec; color: #1a1a2e; }
+  .btn-cancel { background: #555; color: #fff; }
+  .btn-cancel:hover { background: #777; }
+
+  /* ===== DAY SELECTOR ===== */
+  #day-selector {
+    position: fixed;
+    top: 60px; left: 0; right: 0;
+    height: 50px;
+    background: linear-gradient(135deg, #0f0f23, #16213e);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    z-index: 99;
+    border-bottom: 2px solid #0d7377;
+    padding: 0 20px;
+  }
+  .day-tab {
+    padding: 8px 22px;
+    border: 1px solid #0d7377;
+    border-radius: 8px;
+    background: transparent;
+    color: #bdc3c7;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .day-tab:hover {
+    background: rgba(13, 115, 119, 0.3);
+    color: #14ffec;
+  }
+  .day-tab.active {
+    background: #0d7377;
+    color: #14ffec;
+    border-color: #14ffec;
+    box-shadow: 0 0 15px rgba(20, 255, 236, 0.3);
+  }
+  .day-tab.today-badge::after {
+    content: ' ●';
+    color: #f1c40f;
+  }
+
+  /* ===== MAIN BOARD ===== */
+  #board {
+    position: relative;
+    width: 100vw;
+    height: calc(100vh - 110px);
+    margin-top: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ===== CLOCK ===== */
+  #clock-container {
+    position: relative;
+    width: 400px;
+    height: 400px;
+    z-index: 10;
+  }
+  #clock {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: radial-gradient(circle, #16213e 0%, #0f0f23 100%);
+    border: 6px solid #0d7377;
+    box-shadow: 0 0 40px rgba(13, 115, 119, 0.5), inset 0 0 30px rgba(0,0,0,0.5);
+    position: relative;
+  }
+  .clock-number {
+    position: absolute;
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #14ffec;
+    transform: translate(-50%, -50%);
+  }
+  .clock-tick {
+    position: absolute;
+    background: #0d7377;
+    transform-origin: center;
+  }
+  .hand {
+    position: absolute;
+    bottom: 50%;
+    left: 50%;
+    transform-origin: bottom center;
+    border-radius: 4px;
+    z-index: 5;
+  }
+  #hour-hand {
+    width: 6px;
+    height: 100px;
+    background: #fff;
+    transform: translateX(-50%) rotate(0deg);
+  }
+  #minute-hand {
+    width: 4px;
+    height: 140px;
+    background: #14ffec;
+    transform: translateX(-50%) rotate(0deg);
+  }
+  #second-hand {
+    width: 2px;
+    height: 160px;
+    background: #e94560;
+    transform: translateX(-50%) rotate(0deg);
+    z-index: 6;
+  }
+  #clock-center {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 16px; height: 16px;
+    background: #e94560;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 7;
+    box-shadow: 0 0 10px rgba(233, 69, 96, 0.8);
+  }
+  #digital-time {
+    position: absolute;
+    top: 62%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.1rem;
+    color: #14ffec;
+    font-variant-numeric: tabular-nums;
+    font-weight: bold;
+    z-index: 8;
+  }
+
+  /* ===== SCHEDULE ENTRIES (radial) ===== */
+  .entry-card {
+    position: absolute;
+    width: 180px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    z-index: 20;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    border: 2px solid transparent;
+    transform: translate(-50%, -50%);
+  }
+  .entry-card:hover {
+    transform: translate(-50%, -50%) scale(1.08);
+    z-index: 30;
+  }
+  .entry-card.vista {
+    background: linear-gradient(135deg, #1a5276, #2874a6);
+    border-color: #3498db;
+  }
+  .entry-card.dangabay {
+    background: linear-gradient(135deg, #196f3d, #229954);
+    border-color: #2ecc71;
+  }
+  .entry-card .entry-time {
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+  .entry-card .entry-name {
+    font-size: 0.95rem;
+    color: #ecf0f1;
+    margin-bottom: 2px;
+  }
+  .entry-card .entry-location {
+    font-size: 0.8rem;
+    color: #bdc3c7;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .entry-card.active {
+    animation: pulse-active 0.5s infinite alternate;
+    border-color: #f1c40f;
+    box-shadow: 0 0 30px rgba(241, 196, 15, 0.9), 0 0 60px rgba(241, 196, 15, 0.5);
+    z-index: 40;
+  }
+  @keyframes pulse-active {
+    from { transform: translate(-50%, -50%) scale(1); }
+    to { transform: translate(-50%, -50%) scale(1.15); }
+  }
+  .entry-card .entry-delete {
+    position: absolute;
+    top: -8px; right: -8px;
+    width: 22px; height: 22px;
+    background: #e94560;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    color: #fff;
+    font-weight: bold;
+  }
+  .entry-card:hover .entry-delete {
+    display: flex;
+  }
+  .entry-card .entry-delete:hover {
+    background: #ff6b81;
+  }
+
+  /* ===== MODAL ===== */
+  #modal-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+  }
+  #modal-overlay.show { display: flex; }
+  .modal {
+    background: #16213e;
+    border: 2px solid #0d7377;
+    border-radius: 14px;
+    padding: 30px;
+    width: 420px;
+    max-width: 90%;
+  }
+  .modal h2 {
+    color: #14ffec;
+    margin-bottom: 20px;
+    font-size: 1.3rem;
+  }
+  .modal label {
+    display: block;
+    margin-bottom: 5px;
+    color: #bdc3c7;
+    font-size: 0.9rem;
+  }
+  .modal input, .modal select {
+    width: 100%;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+    border: 1px solid #0d7377;
+    border-radius: 6px;
+    background: #1a1a2e;
+    color: #fff;
+    font-size: 1rem;
+  }
+  .modal input:focus, .modal select:focus {
+    outline: none;
+    border-color: #14ffec;
+  }
+  .day-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .day-check {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid #0d7377;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: #bdc3c7;
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .day-check input {
+    width: auto;
+    margin: 0;
+    accent-color: #14ffec;
+    cursor: pointer;
+  }
+  .day-check:has(input:checked) {
+    background: rgba(13, 115, 119, 0.4);
+    border-color: #14ffec;
+    color: #14ffec;
+  }
+  .day-check:hover {
+    background: rgba(13, 115, 119, 0.2);
+  }
+  .modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 10px;
+  }
+
+  /* ===== ALARM POPUP ===== */
+  #alarm-popup {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 300;
+    animation: alarm-flash 0.5s infinite alternate;
+  }
+  #alarm-popup.show { display: flex; }
+  @keyframes alarm-flash {
+    from { background: rgba(0,0,0,0.85); }
+    to { background: rgba(241, 196, 15, 0.3); }
+  }
+  .alarm-content {
+    text-align: center;
+    padding: 40px 60px;
+    background: #16213e;
+    border: 4px solid #f1c40f;
+    border-radius: 20px;
+    box-shadow: 0 0 80px rgba(241, 196, 15, 0.8);
+  }
+  .alarm-content .alarm-icon {
+    font-size: 4rem;
+    margin-bottom: 10px;
+    animation: ring 0.4s infinite alternate;
+  }
+  @keyframes ring {
+    from { transform: rotate(-15deg); }
+    to { transform: rotate(15deg); }
+  }
+  .alarm-content .alarm-title {
+    font-size: 1.8rem;
+    color: #f1c40f;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+  }
+  .alarm-content .alarm-time {
+    font-size: 3rem;
+    font-weight: bold;
+    color: #14ffec;
+    margin-bottom: 15px;
+  }
+  .alarm-content .alarm-name {
+    font-size: 2rem;
+    color: #fff;
+    margin-bottom: 10px;
+  }
+  .alarm-content .alarm-location {
+    font-size: 1.4rem;
+    color: #bdc3c7;
+    margin-bottom: 30px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  .alarm-content .btn-ack {
+    padding: 14px 40px;
+    font-size: 1.2rem;
+    background: #e94560;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  .alarm-content .btn-ack:hover {
+    background: #ff6b81;
+  }
+
+  /* ===== LEGEND ===== */
+  #legend {
+    position: fixed;
+    bottom: 15px;
+    left: 20px;
+    display: flex;
+    gap: 20px;
+    font-size: 0.85rem;
+    z-index: 50;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #bdc3c7;
+  }
+  .legend-dot {
+    width: 14px; height: 14px;
+    border-radius: 4px;
+  }
+  .legend-dot.vista { background: #2874a6; border: 1px solid #3498db; }
+  .legend-dot.dangabay { background: #229954; border: 1px solid #2ecc71; }
+
+  /* ===== EMPTY STATE ===== */
+  #empty-state {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, 250px);
+    color: #555;
+    font-size: 0.9rem;
+    text-align: center;
+  }
+
+  /* ===== RESPONSIVE: TABLET (<=768px) ===== */
+  @media (max-width: 768px) {
+    #header { height: 50px; padding: 0 15px; }
+    #header h1 { font-size: 1.1rem; letter-spacing: 1px; }
+    #header .current-time { font-size: 1rem; }
+    .btn { padding: 6px 14px; font-size: 0.8rem; }
+
+    #day-selector { top: 50px; height: 45px; gap: 4px; padding: 0 10px; overflow-x: auto; justify-content: flex-start; }
+    .day-tab { padding: 6px 14px; font-size: 0.8rem; }
+
+    #board { margin-top: 95px; height: calc(100vh - 95px); }
+
+    #clock-container { width: 280px; height: 280px; }
+    .clock-number { font-size: 1.3rem; }
+    #hour-hand { height: 70px; }
+    #minute-hand { height: 98px; }
+    #second-hand { height: 112px; }
+    #digital-time { font-size: 0.9rem; }
+
+    .entry-card { width: 140px; padding: 8px 10px; }
+    .entry-card .entry-time { font-size: 1.1rem; }
+    .entry-card .entry-name { font-size: 0.8rem; }
+    .entry-card .entry-location { font-size: 0.7rem; }
+
+    .modal { width: 90%; padding: 20px; }
+    .day-check { padding: 5px 10px; font-size: 0.8rem; }
+
+    .alarm-content { padding: 25px 30px; }
+    .alarm-content .alarm-title { font-size: 1.3rem; }
+    .alarm-content .alarm-time { font-size: 2.2rem; }
+    .alarm-content .alarm-name { font-size: 1.5rem; }
+    .alarm-content .alarm-location { font-size: 1.1rem; }
+
+    #legend { font-size: 0.75rem; bottom: 10px; left: 10px; }
+  }
+
+  /* ===== RESPONSIVE: PHONE (<=480px) ===== */
+  @media (max-width: 480px) {
+    #header { height: 45px; padding: 0 10px; }
+    #header h1 { font-size: 0.85rem; letter-spacing: 0.5px; }
+    #header .current-time { font-size: 0.85rem; }
+    .btn { padding: 5px 10px; font-size: 0.75rem; }
+
+    #day-selector { top: 45px; height: 40px; gap: 3px; padding: 0 8px; }
+    .day-tab { padding: 5px 10px; font-size: 0.72rem; }
+
+    #board { margin-top: 85px; height: calc(100vh - 85px); }
+
+    #clock-container { width: 200px; height: 200px; }
+    .clock-number { font-size: 0.95rem; }
+    #hour-hand { height: 50px; width: 5px; }
+    #minute-hand { height: 70px; width: 3px; }
+    #second-hand { height: 80px; width: 2px; }
+    #digital-time { font-size: 0.75rem; }
+    #clock-center { width: 12px; height: 12px; }
+
+    .entry-card { width: 110px; padding: 6px 8px; border-radius: 8px; }
+    .entry-card .entry-time { font-size: 0.9rem; }
+    .entry-card .entry-name { font-size: 0.7rem; }
+    .entry-card .entry-location { font-size: 0.6rem; letter-spacing: 0.5px; }
+
+    .modal { width: 95%; padding: 15px; }
+    .modal h2 { font-size: 1.1rem; margin-bottom: 12px; }
+    .modal input, .modal select { padding: 8px 10px; font-size: 0.9rem; margin-bottom: 12px; }
+    .day-checkboxes { gap: 5px; }
+    .day-check { padding: 4px 8px; font-size: 0.72rem; }
+
+    .alarm-content { padding: 20px 20px; }
+    .alarm-content .alarm-icon { font-size: 2.5rem; }
+    .alarm-content .alarm-title { font-size: 1.1rem; letter-spacing: 1px; }
+    .alarm-content .alarm-time { font-size: 1.8rem; }
+    .alarm-content .alarm-name { font-size: 1.2rem; }
+    .alarm-content .alarm-location { font-size: 0.95rem; }
+    .alarm-content .btn-ack { padding: 10px 28px; font-size: 1rem; }
+
+    #legend { font-size: 0.7rem; gap: 12px; bottom: 8px; left: 8px; }
+    .legend-dot { width: 11px; height: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>🚐 Shuttle Pickup Schedule</h1>
+  <div class="header-right">
+    <span class="current-time" id="header-time">--:--:--</span>
+    <button class="btn btn-add" onclick="openAddModal()">+ Tambah</button>
+  </div>
+</div>
+
+<div id="day-selector"></div>
+
+<div id="board">
+  <div id="clock-container">
+    <div id="clock">
+      <div id="hour-hand" class="hand"></div>
+      <div id="minute-hand" class="hand"></div>
+      <div id="second-hand" class="hand"></div>
+      <div id="clock-center"></div>
+      <div id="digital-time">--:--:--</div>
+    </div>
+  </div>
+  <div id="entries-container"></div>
+</div>
+
+<div id="legend">
+  <div class="legend-item"><div class="legend-dot vista"></div> Vista Tiara</div>
+  <div class="legend-item"><div class="legend-dot dangabay"></div> Dangabay</div>
+</div>
+
+<!-- Modal: Add/Edit Entry -->
+<div id="modal-overlay">
+  <div class="modal">
+    <h2 id="modal-title">Tambah Entri Jadual</h2>
+    <label>Waktu Pickup (HH:MM)</label>
+    <input type="time" id="input-time" required>
+    <label>Nama Customer</label>
+    <input type="text" id="input-name" placeholder="Cth: Ahmad bin Ali" required>
+    <label>Hari Pickup (tick hari yang berkenan)</label>
+    <div class="day-checkboxes" id="input-days">
+      <label class="day-check"><input type="checkbox" value="1"> Isnin</label>
+      <label class="day-check"><input type="checkbox" value="2"> Selasa</label>
+      <label class="day-check"><input type="checkbox" value="3"> Rabu</label>
+      <label class="day-check"><input type="checkbox" value="4"> Khamis</label>
+      <label class="day-check"><input type="checkbox" value="5"> Jumaat</label>
+      <label class="day-check"><input type="checkbox" value="6"> Sabtu</label>
+      <label class="day-check"><input type="checkbox" value="0"> Ahad</label>
+    </div>
+    <label>Lokasi</label>
+    <select id="input-location">
+      <option value="vista">Vista Tiara</option>
+      <option value="dangabay">Dangabay</option>
+    </select>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModal()">Batal</button>
+      <button class="btn btn-save" onclick="saveEntry()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Alarm Popup -->
+<div id="alarm-popup">
+  <div class="alarm-content">
+    <div class="alarm-icon">🔔</div>
+    <div class="alarm-title">Waktu Pickup!</div>
+    <div class="alarm-time" id="alarm-time-display">--:--</div>
+    <div class="alarm-name" id="alarm-name-display"></div>
+    <div class="alarm-location" id="alarm-location-display"></div>
+    <button class="btn-ack" onclick="acknowledgeAlarm()">TUTUP</button>
+  </div>
+</div>
+
+<script>
+// ===== DATA =====
+let entries = [];
+let editingId = null;
+let currentAlarmEntry = null;
+let alarmAudioCtx = null;
+let alarmInterval = null;
+let triggeredKeys = new Set();
+let selectedDay = new Date().getDay(); // 0=Ahad, 1=Isnin, ..., 6=Sabtu
+
+const DAY_NAMES = ['Ahad', 'Isnin', 'Selasa', 'Rabu', 'Khamis', 'Jumaat', 'Sabtu'];
+const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0]; // Isnin first, Ahad last
+
+const STORAGE_KEY = 'shuttle_whiteboard_entries';
+
+function loadEntries() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw) {
+    try { entries = JSON.parse(raw); } catch(e) { entries = []; }
+  }
+  // Auto-upgrade old entries: convert day (single) to days (array)
+  const today = new Date().getDay();
+  entries.forEach(e => {
+    if (e.days === undefined || e.days === null) {
+      if (e.day !== undefined && e.day !== null) {
+        e.days = [e.day];
+      } else {
+        e.days = [today];
+      }
+      delete e.day;
+    }
+  });
+  if (!entries || entries.length === 0) {
+    entries = [
+      { id: nextId(), days: [1, 3, 5], time: '07:30', name: 'Ahmad bin Ali', location: 'vista' },
+      { id: nextId(), days: [1, 4], time: '08:15', name: 'Siti Nurhaliza', location: 'dangabay' },
+      { id: nextId(), days: [1, 2, 4, 6], time: '09:00', name: 'Tan Wei Ming', location: 'vista' },
+      { id: nextId(), days: [1, 5], time: '12:00', name: 'Noraini binti Yusof', location: 'vista' },
+      { id: nextId(), days: [2, 3, 5], time: '08:00', name: 'Rajesh Kumar', location: 'dangabay' },
+      { id: nextId(), days: [2, 4], time: '10:30', name: 'Lim Chee Keong', location: 'dangabay' },
+      { id: nextId(), days: [2, 6], time: '14:00', name: 'Aisyah binti Rahman', location: 'vista' },
+      { id: nextId(), days: [3, 5], time: '07:45', name: 'David Anak Nyaring', location: 'dangabay' },
+      { id: nextId(), days: [3, 0], time: '11:00', name: 'Chong Kar Wai', location: 'dangabay' },
+      { id: nextId(), days: [3, 4, 6], time: '16:30', name: 'Fatimah binti Ibrahim', location: 'vista' },
+      { id: nextId(), days: [4, 5], time: '13:00', name: 'Siti Nurhaliza', location: 'dangabay' },
+      { id: nextId(), days: [4], time: '17:30', name: 'Ahmad bin Ali', location: 'vista' },
+      { id: nextId(), days: [5], time: '12:30', name: 'Fatimah binti Ibrahim', location: 'vista' },
+      { id: nextId(), days: [5, 0], time: '18:00', name: 'Rajesh Kumar', location: 'dangabay' },
+      { id: nextId(), days: [6, 0], time: '09:00', name: 'Aisyah binti Rahman', location: 'vista' },
+      { id: nextId(), days: [6], time: '11:30', name: 'David Anak Nyaring', location: 'dangabay' },
+      { id: nextId(), days: [0], time: '10:00', name: 'Chong Kar Wai', location: 'dangabay' },
+      { id: nextId(), days: [0], time: '14:30', name: 'Noraini binti Yusof', location: 'vista' },
+    ];
+    saveEntries();
+  }
+}
+
+function saveEntries() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+}
+
+function nextId() {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+}
+
+// ===== CLOCK =====
+function buildClockFace() {
+  const clock = document.getElementById('clock');
+  const container = document.getElementById('clock-container');
+  const size = container.offsetWidth;
+  const centerX = size / 2, centerY = size / 2;
+  const radius = size / 2 - 40;
+  const tickInner = size / 2 - 32;
+  const tickInnerMinor = size / 2 - 28;
+
+  for (let i = 1; i <= 12; i++) {
+    const angle = (i * 30 - 90) * Math.PI / 180;
+    const x = centerX + Math.cos(angle) * (radius - 10);
+    const y = centerY + Math.sin(angle) * (radius - 10);
+    const num = document.createElement('div');
+    num.className = 'clock-number';
+    num.textContent = i;
+    num.style.left = x + 'px';
+    num.style.top = y + 'px';
+    clock.appendChild(num);
+  }
+
+  for (let i = 0; i < 60; i++) {
+    const angle = (i * 6 - 90) * Math.PI / 180;
+    const isMain = i % 5 === 0;
+    const tick = document.createElement('div');
+    tick.className = 'clock-tick';
+    const innerR = isMain ? tickInner : tickInnerMinor;
+    const x1 = centerX + Math.cos(angle) * innerR;
+    const y1 = centerY + Math.sin(angle) * innerR;
+    const len = isMain ? 12 : 7;
+    const wid = isMain ? 3 : 1.5;
+    tick.style.width = wid + 'px';
+    tick.style.height = len + 'px';
+    tick.style.left = x1 + 'px';
+    tick.style.top = y1 + 'px';
+    tick.style.transform = `rotate(${i * 6 + 90}deg)`;
+    clock.appendChild(tick);
+  }
+}
+
+function rebuildClockFace() {
+  const clock = document.getElementById('clock');
+  clock.querySelectorAll('.clock-number, .clock-tick').forEach(el => el.remove());
+  buildClockFace();
+}
+
+function updateClock() {
+  const now = new Date();
+  const h = now.getHours();
+  const m = now.getMinutes();
+  const s = now.getSeconds();
+  const ms = now.getMilliseconds();
+
+  const secondDeg = (s + ms / 1000) * 6;
+  const minuteDeg = m * 6 + s * 0.1;
+  const hourDeg = (h % 12) * 30 + m * 0.5;
+
+  document.getElementById('second-hand').style.transform = `translateX(-50%) rotate(${secondDeg}deg)`;
+  document.getElementById('minute-hand').style.transform = `translateX(-50%) rotate(${minuteDeg}deg)`;
+  document.getElementById('hour-hand').style.transform = `translateX(-50%) rotate(${hourDeg}deg)`;
+
+  const timeStr = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  document.getElementById('digital-time').textContent = timeStr;
+  document.getElementById('header-time').textContent = timeStr;
+}
+
+// ===== ENTRIES RADIAL LAYOUT =====
+function renderEntries() {
+  const container = document.getElementById('entries-container');
+  container.innerHTML = '';
+
+  const board = document.getElementById('board');
+  const boardRect = board.getBoundingClientRect();
+  const centerX = boardRect.width / 2;
+  const centerY = boardRect.height / 2;
+
+  // Filter entries by selected day (entry.days includes selectedDay), then sort by time
+  const dayEntries = entries.filter(e => Array.isArray(e.days) && e.days.includes(selectedDay));
+  const sorted = [...dayEntries].sort((a, b) => a.time.localeCompare(b.time));
+
+  // Calculate radius based on screen size
+  const minDim = Math.min(boardRect.width, boardRect.height);
+  const radius = Math.max(280, minDim / 2 - 130);
+
+  sorted.forEach((entry, idx) => {
+    const [h, m] = entry.time.split(':').map(Number);
+    // Convert time to angle: 12 o'clock = top, clockwise
+    const totalMinutes = h * 60 + m;
+    const angleDeg = (totalMinutes / 720) * 360 - 90; // 720 min = 12 hours
+    const angleRad = angleDeg * Math.PI / 180;
+
+    const x = centerX + Math.cos(angleRad) * radius;
+    const y = centerY + Math.sin(angleRad) * radius;
+
+    const card = document.createElement('div');
+    card.className = 'entry-card ' + (entry.location === 'vista' ? 'vista' : 'dangabay');
+    card.style.left = x + 'px';
+    card.style.top = y + 'px';
+    card.dataset.id = entry.id;
+
+    const locLabel = entry.location === 'vista' ? 'Vista Tiara' : 'Dangabay';
+
+    card.innerHTML = `
+      <div class="entry-time">${entry.time}</div>
+      <div class="entry-name">${escapeHtml(entry.name)}</div>
+      <div class="entry-location">${locLabel}</div>
+      <div class="entry-delete" onclick="event.stopPropagation(); deleteEntry('${entry.id}')">✕</div>
+    `;
+    card.onclick = () => openEditModal(entry.id);
+    container.appendChild(card);
+  });
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// ===== ADD / EDIT / DELETE =====
+function openAddModal() {
+  editingId = null;
+  document.getElementById('modal-title').textContent = 'Tambah Entri Jadual';
+  document.getElementById('input-time').value = '';
+  document.getElementById('input-name').value = '';
+  document.getElementById('input-location').value = 'vista';
+  // Reset all day checkboxes, tick the currently selected day by default
+  document.querySelectorAll('#input-days input[type=checkbox]').forEach(cb => {
+    cb.checked = (parseInt(cb.value) === selectedDay);
+  });
+  document.getElementById('modal-overlay').classList.add('show');
+  setTimeout(() => document.getElementById('input-time').focus(), 100);
+}
+
+function openEditModal(id) {
+  const entry = entries.find(e => e.id === id);
+  if (!entry) return;
+  editingId = id;
+  document.getElementById('modal-title').textContent = 'Edit Entri Jadual';
+  document.getElementById('input-time').value = entry.time;
+  document.getElementById('input-name').value = entry.name;
+  document.getElementById('input-location').value = entry.location;
+  // Tick checkboxes based on entry.days
+  document.querySelectorAll('#input-days input[type=checkbox]').forEach(cb => {
+    cb.checked = Array.isArray(entry.days) && entry.days.includes(parseInt(cb.value));
+  });
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('show');
+  editingId = null;
+}
+
+function saveEntry() {
+  const time = document.getElementById('input-time').value;
+  const name = document.getElementById('input-name').value.trim();
+  const location = document.getElementById('input-location').value;
+  const days = [];
+  document.querySelectorAll('#input-days input[type=checkbox]:checked').forEach(cb => {
+    days.push(parseInt(cb.value));
+  });
+
+  if (!time || !name) {
+    alert('Sila isi waktu dan nama customer.');
+    return;
+  }
+  if (days.length === 0) {
+    alert('Sila tick sekurang-kurangnya satu hari.');
+    return;
+  }
+
+  if (editingId) {
+    const entry = entries.find(e => e.id === editingId);
+    if (entry) {
+      entry.time = time;
+      entry.name = name;
+      entry.location = location;
+      entry.days = days;
+      delete entry.day;
+    }
+  } else {
+    entries.push({ id: nextId(), days, time, name, location });
+  }
+
+  saveEntries();
+  renderEntries();
+  closeModal();
+}
+
+function deleteEntry(id) {
+  if (!confirm('Padam entri ini?')) return;
+  entries = entries.filter(e => e.id !== id);
+  saveEntries();
+  renderEntries();
+}
+
+// ===== ALARM SYSTEM =====
+function checkAlarms() {
+  const now = new Date();
+  const currentStr = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  const currentDay = now.getDay();
+  const key = currentStr + '_' + now.toDateString();
+
+  // Clear old triggered keys (keep only today's)
+  const todayPrefix = now.toDateString();
+  triggeredKeys.forEach(k => {
+    if (!k.endsWith(todayPrefix)) triggeredKeys.delete(k);
+  });
+
+  // Check each entry - alarm triggers only for TODAY's entries
+  for (const entry of entries) {
+    if (Array.isArray(entry.days) && entry.days.includes(currentDay) && entry.time === currentStr) {
+      const triggerKey = entry.id + '_' + key;
+      if (!triggeredKeys.has(triggerKey)) {
+        triggeredKeys.add(triggerKey);
+        triggerAlarm(entry);
+        break; // one alarm at a time
+      }
+    }
+  }
+
+  // Highlight active entries (current minute + current day)
+  document.querySelectorAll('.entry-card').forEach(card => {
+    const id = card.dataset.id;
+    const entry = entries.find(e => e.id === id);
+    if (entry && entry.time === currentStr && Array.isArray(entry.days) && entry.days.includes(currentDay)) {
+      card.classList.add('active');
+    } else {
+      card.classList.remove('active');
+    }
+  });
+}
+
+function triggerAlarm(entry) {
+  currentAlarmEntry = entry;
+
+  // Show popup
+  const popup = document.getElementById('alarm-popup');
+  document.getElementById('alarm-time-display').textContent = entry.time;
+  document.getElementById('alarm-name-display').textContent = entry.name;
+  document.getElementById('alarm-location-display').textContent =
+    entry.location === 'vista' ? 'Vista Tiara' : 'Dangabay';
+  popup.classList.add('show');
+
+  // Auto-switch to today's tab if viewing different day
+  if (selectedDay !== new Date().getDay()) {
+    selectedDay = new Date().getDay();
+    updateDayTabs();
+    renderEntries();
+  }
+
+  // Start loud alarm sound
+  startAlarmSound();
+}
+
+function startAlarmSound() {
+  try {
+    alarmAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  } catch(e) {
+    console.error('Web Audio API not supported', e);
+    return;
+  }
+
+  alarmInterval = setInterval(() => {
+    playBeep(880, 0.15); // high beep
+    setTimeout(() => playBeep(660, 0.15), 200);
+  }, 500);
+}
+
+function playBeep(freq, duration) {
+  if (!alarmAudioCtx) return;
+  const osc = alarmAudioCtx.createOscillator();
+  const gain = alarmAudioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(alarmAudioCtx.destination);
+  osc.type = 'square';
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.3, alarmAudioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, alarmAudioCtx.currentTime + duration);
+  osc.start(alarmAudioCtx.currentTime);
+  osc.stop(alarmAudioCtx.currentTime + duration);
+}
+
+function acknowledgeAlarm() {
+  document.getElementById('alarm-popup').classList.remove('show');
+  if (alarmInterval) {
+    clearInterval(alarmInterval);
+    alarmInterval = null;
+  }
+  if (alarmAudioCtx) {
+    alarmAudioCtx.close();
+    alarmAudioCtx = null;
+  }
+  currentAlarmEntry = null;
+}
+
+// ===== DAY SELECTOR =====
+function buildDaySelector() {
+  const container = document.getElementById('day-selector');
+  container.innerHTML = '';
+  const today = new Date().getDay();
+
+  DAY_ORDER.forEach(dayNum => {
+    const tab = document.createElement('button');
+    tab.className = 'day-tab';
+    tab.textContent = DAY_NAMES[dayNum];
+    tab.dataset.day = dayNum;
+    if (dayNum === today) tab.classList.add('today-badge');
+    if (dayNum === selectedDay) tab.classList.add('active');
+    tab.onclick = () => selectDay(dayNum);
+    container.appendChild(tab);
+  });
+}
+
+function selectDay(dayNum) {
+  selectedDay = dayNum;
+  updateDayTabs();
+  renderEntries();
+}
+
+function updateDayTabs() {
+  document.querySelectorAll('.day-tab').forEach(tab => {
+    const dayNum = parseInt(tab.dataset.day);
+    if (dayNum === selectedDay) {
+      tab.classList.add('active');
+    } else {
+      tab.classList.remove('active');
+    }
+  });
+}
+
+// ===== INIT =====
+function init() {
+  loadEntries();
+  buildClockFace();
+  buildDaySelector();
+  renderEntries();
+  updateClock();
+
+  setInterval(updateClock, 50);
+  setInterval(checkAlarms, 1000);
+
+  // Re-render entries and rebuild clock on resize
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    renderEntries();
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      rebuildClockFace();
+    }, 200);
+  });
+
+  // Close modal on overlay click
+  document.getElementById('modal-overlay').addEventListener('click', (e) => {
+    if (e.target.id === 'modal-overlay') closeModal();
+  });
+
+  // Enter key to save
+  document.getElementById('input-name').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveEntry();
+  });
+}
+
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
