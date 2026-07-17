@@ -682,8 +682,11 @@ const DEFAULT_ENTRIES = [
 ];
 
 function loadEntries() {
+  // Always load local cache first for instant display
+  loadLocalCache();
+  
   if (useFirebase) {
-    // Load from Realtime Database with real-time listener
+    // Then subscribe to real-time updates from Firebase
     rtdb.ref(RTDB_PATH).on('value', snapshot => {
       const val = snapshot.val();
       console.log('[TransportOClock] RTDB update received, entries:', val ? Object.keys(val).length : 0);
@@ -697,12 +700,10 @@ function loadEntries() {
       upgradeEntries();
       cacheLocal();
       renderEntries();
+      buildDaySelector();
     }, err => {
-      console.warn('RTDB listen failed, using cache', err);
-      loadLocalCache();
+      console.warn('[TransportOClock] RTDB listen failed, using cache', err);
     });
-  } else {
-    loadLocalCache();
   }
 }
 
@@ -1022,6 +1023,52 @@ function triggerAlarm(entry) {
 
   // Start loud alarm sound
   startAlarmSound();
+
+  // Send browser push notification
+  sendPushNotification(entry);
+
+  // Vibrate on mobile devices
+  if (navigator.vibrate) {
+    navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
+  }
+}
+
+function sendPushNotification(entry) {
+  if (!('Notification' in window)) {
+    console.warn('[TransportOClock] Browser does not support notifications');
+    return;
+  }
+  
+  const locLabel = entry.location === 'vista' ? 'Vista Tiara' : 'Dangabay';
+  const title = '🔔 Pickup Time: ' + entry.time;
+  const body = entry.name + ' - ' + locLabel;
+  
+  if (Notification.permission === 'granted') {
+    const notif = new Notification(title, {
+      body: body,
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🚐</text></svg>',
+      tag: 'transportoclock-' + entry.id,
+      requireInteraction: true
+    });
+    notif.onclick = function() {
+      window.focus();
+      this.close();
+    };
+  } else if (Notification.permission !== 'denied') {
+    Notification.requestPermission().then(permission => {
+      if (permission === 'granted') {
+        const notif = new Notification(title, {
+          body: body,
+          tag: 'transportoclock-' + entry.id,
+          requireInteraction: true
+        });
+        notif.onclick = function() {
+          window.focus();
+          this.close();
+        };
+      }
+    });
+  }
 }
 
 function startAlarmSound() {
@@ -1106,7 +1153,12 @@ function init() {
   buildClockFace();
   buildDaySelector();
   updateClock();
-  // renderEntries is called by loadEntries callback
+  // renderEntries is called by loadEntries
+
+  // Request notification permission on load
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
 
   setInterval(updateClock, 50);
   setInterval(checkAlarms, 1000);
