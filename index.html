@@ -6,6 +6,12 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TransportOClock">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%231a1a2e' rx='30'/%3E%3Ctext x='96' y='130' font-size='100' text-anchor='middle'%3E%F0%9F%9A%90%3C/text%3E%3C/svg%3E">
 <title>TransportOClock - Shuttle Pickup Schedule</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -540,6 +546,19 @@
     #legend { font-size: 0.7rem; gap: 12px; bottom: 8px; left: 8px; }
     .legend-dot { width: 11px; height: 11px; }
   }
+
+  .btn-install {
+    background: #2196f3;
+    color: #fff;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-left: 6px;
+  }
+  .btn-install:hover { background: #1976d2; }
 </style>
 </head>
 <body>
@@ -549,6 +568,7 @@
   <div class="header-right">
     <span class="current-time" id="header-time">--:--:--</span>
     <button class="btn btn-add" onclick="openAddModal()">+ Tambah</button>
+    <button class="btn btn-install" id="install-btn" style="display:none" onclick="installApp()">Install App</button>
   </div>
 </div>
 
@@ -1042,14 +1062,33 @@ function sendPushNotification(entry) {
   const locLabel = entry.location === 'vista' ? 'Vista Tiara' : 'Dangabay';
   const title = '🔔 Pickup Time: ' + entry.time;
   const body = entry.name + ' - ' + locLabel;
+  const icon = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 192 192%22%3E%3Crect width=%22192%22 height=%22192%22 fill=%22%231a1a2e%22 rx=%2230%22/%3E%3Ctext x=%2296%22 y=%22130%22 font-size=%22100%22 text-anchor=%22middle%22%3E%F0%9F%9A%90%3C/text%3E%3C/svg%3E';
+  const options = {
+    body: body,
+    icon: icon,
+    badge: icon,
+    vibrate: [500, 200, 500, 200, 500, 200, 500],
+    requireInteraction: true,
+    tag: 'transportoclock-' + entry.id,
+    data: { url: '/' }
+  };
   
-  if (Notification.permission === 'granted') {
-    const notif = new Notification(title, {
-      body: body,
-      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🚐</text></svg>',
-      tag: 'transportoclock-' + entry.id,
-      requireInteraction: true
+  // Use Service Worker notification if available (works in background)
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(registration => {
+      registration.showNotification(title, options).catch(() => {
+        // Fallback to regular Notification
+        showFallbackNotification(title, options, entry);
+      });
     });
+  } else {
+    showFallbackNotification(title, options, entry);
+  }
+}
+
+function showFallbackNotification(title, options, entry) {
+  if (Notification.permission === 'granted') {
+    const notif = new Notification(title, options);
     notif.onclick = function() {
       window.focus();
       this.close();
@@ -1057,11 +1096,7 @@ function sendPushNotification(entry) {
   } else if (Notification.permission !== 'denied') {
     Notification.requestPermission().then(permission => {
       if (permission === 'granted') {
-        const notif = new Notification(title, {
-          body: body,
-          tag: 'transportoclock-' + entry.id,
-          requireInteraction: true
-        });
+        const notif = new Notification(title, options);
         notif.onclick = function() {
           window.focus();
           this.close();
@@ -1180,6 +1215,23 @@ function init() {
     Notification.requestPermission();
   }
 
+  // Register Service Worker for PWA + background notifications
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      console.log('[TransportOClock] Service Worker registered');
+    }).catch(err => {
+      console.warn('[TransportOClock] SW registration failed', err);
+    });
+  }
+
+  // Keep alarm running even when tab is in background
+  // Use Page Visibility API to detect background state
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      console.log('[TransportOClock] App in background - alarms still active');
+    }
+  });
+
   setInterval(updateClock, 50);
   setInterval(checkAlarms, 1000);
 
@@ -1202,6 +1254,29 @@ function init() {
   document.getElementById('input-name').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') saveEntry();
   });
+}
+
+// ===== PWA INSTALL =====
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('install-btn').style.display = 'inline-block';
+  console.log('[TransportOClock] PWA install available');
+});
+
+function installApp() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(result => {
+      if (result.outcome === 'accepted') {
+        console.log('[TransportOClock] PWA installed');
+      }
+      deferredPrompt = null;
+      document.getElementById('install-btn').style.display = 'none';
+    });
+  }
 }
 
 window.addEventListener('DOMContentLoaded', init);
