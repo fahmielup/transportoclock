@@ -1071,16 +1071,31 @@ function sendPushNotification(entry) {
   }
 }
 
+let alarmAudio = null;
+
 function startAlarmSound() {
+  // Use custom MP3 alarm sound, looped
+  alarmAudio = new Audio('alarm.mp3');
+  alarmAudio.loop = true;
+  alarmAudio.volume = 1.0;
+  
+  // Try to play (may need user interaction on some browsers)
+  alarmAudio.play().catch(err => {
+    console.warn('[TransportOClock] Audio play blocked, trying AudioContext fallback', err);
+    // Fallback to Web Audio API beeps
+    startBeepFallback();
+  });
+}
+
+function startBeepFallback() {
   try {
     alarmAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
   } catch(e) {
     console.error('Web Audio API not supported', e);
     return;
   }
-
   alarmInterval = setInterval(() => {
-    playBeep(880, 0.15); // high beep
+    playBeep(880, 0.15);
     setTimeout(() => playBeep(660, 0.15), 200);
   }, 500);
 }
@@ -1101,6 +1116,11 @@ function playBeep(freq, duration) {
 
 function acknowledgeAlarm() {
   document.getElementById('alarm-popup').classList.remove('show');
+  if (alarmAudio) {
+    alarmAudio.pause();
+    alarmAudio.currentTime = 0;
+    alarmAudio = null;
+  }
   if (alarmInterval) {
     clearInterval(alarmInterval);
     alarmInterval = null;
