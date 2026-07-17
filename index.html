@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Papan Putih Shuttle - Vista Tiara & Dangabay</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>TransportOClock - Shuttle Pickup Schedule</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -573,9 +576,9 @@
 <div id="modal-overlay">
   <div class="modal">
     <h2 id="modal-title">Tambah Entri Jadual</h2>
-    <label>Waktu Pickup (HH:MM)</label>
+    <label for="input-time">Waktu Pickup (HH:MM)</label>
     <input type="time" id="input-time" required>
-    <label>Nama Customer</label>
+    <label for="input-name">Nama Customer</label>
     <input type="text" id="input-name" placeholder="Cth: Ahmad bin Ali" required>
     <label>Hari Pickup (tick hari yang berkenan)</label>
     <div class="day-checkboxes" id="input-days">
@@ -587,7 +590,7 @@
       <label class="day-check"><input type="checkbox" value="6"> Sabtu</label>
       <label class="day-check"><input type="checkbox" value="0"> Ahad</label>
     </div>
-    <label>Lokasi</label>
+    <label for="input-location">Lokasi</label>
     <select id="input-location">
       <option value="vista">Vista Tiara</option>
       <option value="dangabay">Dangabay</option>
@@ -634,9 +637,12 @@ try {
     firebase.initializeApp(firebaseConfig);
     rtdb = firebase.database();
     useFirebase = true;
+    console.log('[TransportOClock] Firebase connected to:', firebaseConfig.databaseURL);
+  } else {
+    console.warn('[TransportOClock] Firebase config not set, using localStorage only');
   }
 } catch(e) {
-  console.warn('Firebase init failed, using localStorage only', e);
+  console.warn('[TransportOClock] Firebase init failed, using localStorage only', e);
 }
 
 // ===== DATA =====
@@ -680,6 +686,7 @@ function loadEntries() {
     // Load from Realtime Database with real-time listener
     rtdb.ref(RTDB_PATH).on('value', snapshot => {
       const val = snapshot.val();
+      console.log('[TransportOClock] RTDB update received, entries:', val ? Object.keys(val).length : 0);
       if (val === null) {
         // First time: seed default entries
         entries = [...DEFAULT_ENTRIES];
@@ -745,8 +752,10 @@ function saveEntries() {
 function syncToRTDB() {
   const obj = {};
   entries.forEach(entry => { obj[entry.id] = entry; });
-  rtdb.ref(RTDB_PATH).set(obj).catch(err => {
-    console.warn('RTDB sync failed', err);
+  rtdb.ref(RTDB_PATH).set(obj).then(() => {
+    console.log('[TransportOClock] Synced to RTDB:', entries.length, 'entries');
+  }).catch(err => {
+    console.warn('[TransportOClock] RTDB sync failed', err);
   });
 }
 
